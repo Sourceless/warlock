@@ -3,28 +3,28 @@ import sys
 from parsimonious.grammar import Grammar
 
 
-# WARLOCK_GRAMMAR = Grammar(
-#     """
-#     newline = "\n"
-#     indent = "INDENT"
-#     dedent = "DEDENT"
-#     func_name = ~r"[a-zA-Z]\S*"
-#     single_quoted_string_literal = "'" ~r"[^']" "'"
-#     double_quoted_string_literal = "\"" ~r"[^\"]" "\""
-#     string_literal = single_quoted_string_literal | double_quoted_string_literal
-#     func_call = func_name "(" (string_literal ("," string_literal)*)? ")"
-#     func_def = "def" " " func_name "():" newline indent newline expr (newline expr)* newline dedent
-#     expr = func_def | func_call
-#     program = (expr (newline expr)*)?
-#     """)
-
-SIMPLE_GRAMMAR = Grammar(
+WARLOCK_GRAMMAR = Grammar(
     r"""
-    program = (expr newline* (newline+ expr)*)?
-    newline = "\n"
-    expr = literal / funcall / symbol
+    program = newline? exprs newline?
+    exprs = expr (newline expr)*
+    expr = !reserved (statement / literal / funcall / symbol)
 
+    reserved = "INDENT" / "DEDENT"
+
+    newline = ~r"\n+"
     ws = ~r"\s+"
+
+    statement = if_stmt_group / for_stmt / while_stmt / function_def / return_stmt / assignment
+    if_stmt_group = if_stmt elif_stmt* else_stmt?
+    if_stmt = "if" ws expr ":" newline block
+    elif_stmt = "el" if_stmt
+    else_stmt = "else:" newline block
+    for_stmt = "for" ws symbol ws "in" ws expr ":" newline block
+    while_stmt = "while" ws expr ":" newline block
+    function_def = "def" ws symbol ws? "(" (ws? expr (ws? "," ws? expr)*)? ws? "):" newline block
+    return_stmt = "return" ws
+    assignment = symbol ws? "=" ws? expr
+    block = "INDENT" newline exprs newline "DEDENT"
 
     funcall = symbol ws? "(" ws? (expr ("," ws expr)*)? ws? ")"
 
@@ -37,8 +37,8 @@ SIMPLE_GRAMMAR = Grammar(
 
 
 def parse(program):
-    return SIMPLE_GRAMMAR.parse(program)
+    return WARLOCK_GRAMMAR.parse(program)
 
 
 if __name__ == "__main__":
-    print(SIMPLE_GRAMMAR.parse(sys.stdin.read()))
+    print(WARLOCK_GRAMMAR.parse(sys.stdin.read()))
