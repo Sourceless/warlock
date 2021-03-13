@@ -5,36 +5,44 @@ from parsimonious.grammar import Grammar
 
 WARLOCK_GRAMMAR = Grammar(
     r"""
-    program = newline? exprs newline?
-    exprs = expr (newline expr)*
-    expr = !reserved (statement / literal / funcall / symbol)
+    program = newline? lines newline?
+    lines = line (newline line)*
+    line = comment / expr
+    expr = infix_expr / lone_expr
+    lone_expr = statement / call / literal / symbol
+    infix_expr = lone_expr ws infix_identifier_inner ws expr
+    comment = "#" ~r".*"
 
-    reserved = "INDENT" / "DEDENT"
+    reserved = "INDENT" / "DEDENT" / "define" / "let" / "fn"
 
     newline = ~r"\n+"
-    ws = ~r"\s+"
+    ws = ~r" +"
+    block = "INDENT" newline lines newline "DEDENT"
+    args = "(" ws? (expr ("," ws expr)*)? ws? ")"
 
-    statement = if_stmt_group / for_stmt / while_stmt / function_def / return_stmt / assignment
-    if_stmt_group = if_stmt elif_stmt* else_stmt?
-    if_stmt = "if" ws expr ":" newline block
-    elif_stmt = "el" if_stmt
-    else_stmt = "else:" newline block
-    for_stmt = "for" ws symbol ws "in" ws expr ":" newline block
-    while_stmt = "while" ws expr ":" newline block
-    function_def = "def" ws symbol ws? "(" (ws? expr (ws? "," ws? expr)*)? ws? "):" newline block
-    return_stmt = "return" ws
-    assignment = symbol ws? "=" ws? expr
-    block = "INDENT" newline exprs newline "DEDENT"
+    statement = define / let / lambda / macro
 
-    funcall = symbol ws? "(" ws? (expr ("," ws expr)*)? ws? ")"
+    define = "define" ws symbol ws expr
+    let = "let" ws symbol ws expr
+    lambda = "fn" ws identifier (ws? "," ws? identifier)* ":" ((ws expr) / (newline block))
+    call = symbol ws? args
+
+    macro = stick_macro / block_macro_bare / block_macro_call / block_macro_args
+    stick_macro = symbol "!" ws expr (ws expr)*
+    block_macro_bare = symbol ":" newline block
+    block_macro_args = symbol ws args ":" newline block
+    block_macro_call = symbol ws symbol ws? args ":" newline block
 
     literal = integer / string
     string = "\"" ~r"[^\"]*" "\""
-    integer = ~r"[0-9]+"
+    integer = "-"? natural
+    natural = ~r"[0-9]+"
 
-    symbol = ~r"[A-Z0-9][A-Z0-9-_]*"i
+    symbol = !reserved (identifier / infix_identifier)
+    identifier = ~r"[A-Z0-9][A-Z0-9-_]*"i
+    infix_identifier = "(" infix_identifier_inner ")"
+    infix_identifier_inner = ~r"[+=-~<>/*$%!&_\\\.?@:;|]+"
     """)
-
 
 def parse(program):
     return WARLOCK_GRAMMAR.parse(program)

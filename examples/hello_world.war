@@ -1,2 +1,30 @@
-def hello_world():
-    print("Hello world!")
+define a 5
+let a 6
+fn a: 7
+fn x:
+    x + 1
+
+def hello(who):
+    print(who)
+
+# define the + function
+def add(fst, snd):
+    fst + snd
+
+# define the + function
+def (+)(fst, snd):
+    fst + snd
+
+stick_macro! 1 2
+
+# This is a comment
+
+# You could technically write hello like this, if you wanted
+define hello fn who:
+    print(who)
+
+# This is the lisp (wizard) code that it compiles down to
+# (define hello
+#    (fn (who) (print who)))
+
+# And of course that means it's stupid easy to then execute...
