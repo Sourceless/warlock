@@ -1,9 +1,13 @@
 define a 5
 let a 6
-fn a: 7
-fn x:
+fn (a): 7
+fn (x):
     x + 1
 
+macro(x):
+    x + 1
+
+hello: String -> IO ()
 def hello(who):
     print(who)
 
@@ -15,16 +19,49 @@ def add(fst, snd):
 def (+)(fst, snd):
     fst + snd
 
-stick_macro! 1 2
+# A function with multiple bodies for pattern matching
+inc: Nat -> Nat -> Nat
+def plus(Z, y):
+    y
+
+def plus(S x, y):
+    S
 
 # This is a comment
 
 # You could technically write hello like this, if you wanted
-define hello fn who:
+define hello fn(who):
     print(who)
 
-# This is the lisp (wizard) code that it compiles down to
-# (define hello
+# This is the lisp (wizard) sexp that it compiles down to
+# define hello
 #    (fn (who) (print who)))
 
 # And of course that means it's stupid easy to then execute...
+
+type Nat: Z | S Nat
+
+print("test") # Inline comment
+
+# another comment
+
+def plus(S x, y):
+    S(plus(x, y))
+
+a = inc(1)
+inc(a)
+inc(inc(inc(1)))
+
+# TODO: functions with multiple bodies...
+# myplus: (Nat -> Nat) -> Nat
+# def myplus:
+#     (Z, y): y
+#     (S x, y): S(plus(x, y))
+
+# TODO: traits and impls
+# trait Show a:
+#     show: a -> String
+
+# impl Show Nat:
+#     def show(self):
+#         toString(self)
