@@ -53,15 +53,14 @@ inc(a)
 inc(inc(inc(1)))
 
 # TODO: functions with multiple bodies...
-# myplus: (Nat -> Nat) -> Nat
-# def myplus:
-#     (Z, y): y
-#     (S x, y): S(plus(x, y))
+myplus: (Nat -> Nat) -> Nat
+def myplus:
+    (Z, y): y
+    (S x, y): S(plus(x, y))
 
-# TODO: traits and impls
-# trait Show a:
-#     show: a -> String
+trait Show a:
+    show: a -> String
 
-# impl Show Nat:
-#     def show(self):
-#         toString(self)
+impl Show for Nat:
+    def show(self):
+        toString(self)

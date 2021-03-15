@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 from parsimonious.grammar import Grammar
+from parsimonious.nodes import NodeVisitor, rule
 
 
 WARLOCK_GRAMMAR = Grammar(
@@ -21,11 +22,14 @@ WARLOCK_GRAMMAR = Grammar(
     args = "(" ws? (arg ("," ws? arg)*)? ws? ")"
     arg = call / type_exprs / expr
 
-    statement = define / let / fn / macrodef / type / claim / macro
+    statement = define / let / fn / fn_proto / trait / impl / macrodef / type / claim / macro
 
     define = "define" ws symbol ws expr
     let = "let" ws symbol ws expr
-    fn = "fn" ws? "(" ws? identifier (ws? "," ws? identifier)* ")" ws? ":" ((ws expr) / (newline block))
+    fn = "fn" ws? "(" ws? symbol (ws? "," ws? symbol)* ")" ws? ":" ((ws expr) / (newline block))
+    fn_proto = "fn" ws? "(" ws? symbol (ws? "," ws? symbol)* ")"
+    trait = "trait" ws identifier ":" ((ws expr) / (newline block))
+    impl = "impl" ws "for" ws identifier ":" ((ws expr) / (newline block))
     macrodef = "macro" ws? "(" ws? identifier (ws? "," ws? identifier)* ")" ws? ":" ((ws expr) / (newline block))
     type = "type" ws identifier ws? ":" ws? typedef
     call = symbol ws? args
@@ -41,10 +45,7 @@ WARLOCK_GRAMMAR = Grammar(
     claim_expr = claim_group / type_exprs
     claim_group = "(" ws? claim_exprs ws? ")"
 
-    macro = block_macro_bare / block_macro_call / block_macro_args
-    block_macro_bare = symbol ":" newline block
-    block_macro_args = symbol ws args ":" newline block
-    block_macro_call = symbol ws symbol ws? args ":" newline block
+    macro = &~r"." symbol? (ws arg)* (ws? args)? ":" ((newline block) / (ws expr))
 
     literal = integer / string
     string = "\"" ~r"[^\"]*" "\""
@@ -57,9 +58,76 @@ WARLOCK_GRAMMAR = Grammar(
     infix_identifier_inner = ~r"[+=-~<>/*$%!&_\\\.?@:;|]+"
     """)
 
+
 def parse(program):
     return WARLOCK_GRAMMAR.parse(program)
 
+class WarlockVisitor(NodeVisitor):
+    def visit_newline(self, node, visited_children):
+        return None
+
+    def visit_identifier(self, node, visited_children):
+        return node.text
+
+    def visit_symbol(self, node, visited_children):
+        _reserved, identifier = visited_children
+        return identifier
+
+    def visit_integer(self, node, visited_children):
+        _, value = visited_children
+        return value
+
+    def visit_natural(self, node, visited_chilren):
+        return int(node.text)
+
+    def visit_statement(self, node, visited_children):
+        return visited_children[0]
+
+    def visit_lone_expr(self, node, visited_children):
+        return visited_children[0]
+
+    def visit_program(self, node, visited_children):
+        _, lines, _ = visited_children
+        return lines
+
+    def visit_define(self, node, visited_children):
+        _define, _, sym, _, expr = visited_children
+        return ("define", sym[0], expr[0])
+
+    def visit_lines(self, node, visited_children):
+        line, other_lines, _ = visited_children
+        line = line[0]
+
+        if len(line) == 1:
+            return other_lines
+        if len(line) == 3:
+            return line[0] + other_lines
+
+    def visit_line(self, node, visited_children):
+        return visited_children
+
+    def visit_literal(self, node, visited_children):
+        return visited_children[0]
+
+    def visit_expr(self, node, visited_children):
+        return visited_children
+
+    def generic_visit(self, node, visited_children):
+        rule_name = node.expr.as_rule()
+        if node.expr_name in {"ws"}:
+            return None
+        if rule_name in {"newline?", "!reserved", "ws?", "comment?"}:
+            return None
+        if node.expr_name in {""}:
+            return visited_children
+        return (node.expr_name, visited_children or node)
+
+
+def visit(parse_tree):
+    return WarlockVisitor().visit(parse_tree)
+
 
 if __name__ == "__main__":
-    print(parse(sys.stdin.read()))
+    tree = parse(sys.stdin.read())
+    ast = visit(tree)
+    print(ast)
